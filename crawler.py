@@ -1,42 +1,42 @@
 # A simple crawler which stores to a mongoDB
 import requests
+import sys
 import json
+import config
 from tweepy import Stream
 from tweepy import OAuthHandler
 from tweepy.streaming import StreamListener
 from pymongo import MongoClient
 
-# Connection to Mongo Database
-client = MongoClient("localhost", 27017)
-db = 'NAME_OF_DATABASE'
-collection = 'NAME_OF_COLLECTION'
+KEYWORDS = ['a','the','and'] #Keyword to track (you can provide multiple keywords separated by a comma)
+WANTED_KEYS = [
+  'id_str',
+  'text',
+  'created_at',
+  'in_reply_to_status_id_str',
+  'in_reply_to_user_id_str'] #Wanted keys to store in the database
 
-# Consumer Key
-ckey = 'YOUR_CONSUMER_KEY'
-# Consumer Secret
-csecret = 'YOUR_CONSUMER_SECRET'
-# Access Token
-atoken = 'YOUR_ACCESS_TOKEN'
-# Acces Secret
-asecret = 'YOUR_ACCESS_SECRET'
+# Connection to Mongo Database
+client = MongoClient(config.MONGODB['hostname'], config.MONGODB['port'])
+db = client[config.MONGODB['db']]
+collection = db[config.MONGODB['collection']]
 
 # write tweet to db
 def post_tweet_to_db(tweet):
   post = {"tweet": tweet}
   collection.insert(post)
-  return True  
+  return True
 
 # Stream Listener
 class listener(StreamListener):
   def on_data(self, data):
     try:
-      # TODO: pick what you want to store from the response
       reponse = json.loads(data)
-      tweet = reponse['text']
+      tweet = {key: reponse[key] for key in set(WANTED_KEYS) & set(reponse.keys())}
 
       # uncomment next line to insert tweet information into database or write to file
       #post_tweet_to_db(tweet)
-      print (tweet)
+      print(tweet)
 
     except Exception:
       return True
@@ -57,10 +57,12 @@ class listener(StreamListener):
 # Starts streaming
 while True:
   try:
-    auth = OAuthHandler(ckey, csecret)
-    auth.set_access_token(atoken, asecret)
+    auth = OAuthHandler(
+      config.TWEETER['consumer_key'], config.TWEETER['consumer_secret'])
+    auth.set_access_token(
+      config.TWEETER['access_token'], config.TWEETER['access_secret'])
     twitterStream = Stream(auth, listener())
-    track = ['#joy','#sad',] #Keyword to track (you can provide multiple keywords separated by a comma)
-    twitterStream.filter(track=track)
-  except:
-    continue
+    twitterStream.filter(languages=['en'], track=KEYWORDS)
+  except KeyboardInterrupt:
+    print("Bye")
+    sys.exit()
