@@ -9,6 +9,7 @@ from tweepy.streaming import StreamListener
 from pymongo import MongoClient
 
 KEYWORDS = ['a','the','and'] #Keyword to track (you can provide multiple keywords separated by a comma)
+LANGUAGES = ['en']
 WANTED_KEYS = [
   'id_str',
   'text',
@@ -62,7 +63,7 @@ while True:
     auth.set_access_token(
       config.TWEETER['access_token'], config.TWEETER['access_secret'])
     twitterStream = Stream(auth, listener())
-    twitterStream.filter(languages=['en'], track=KEYWORDS)
+    twitterStream.filter(languages=LANGUAGES, track=KEYWORDS)
   except KeyboardInterrupt:
     print("Bye")
     sys.exit()
